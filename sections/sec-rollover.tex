@@ -1,0 +1,35 @@
+\subsection{Rollover and Blob Update}
+\label{sec:rollover}
+
+To move pending balances into $\cbal$, the owner sends a \emph{rollover} transaction $(\owner, \asset)$.
+
+\para{On-chain rollover.}
+The chain performs:
+%
+\begin{enumerate}[nosep]
+    \item Check $\texttt{msg.sender} = \owner$.
+    \item Compute $\cbal.\ctone := \cbal.\ctone + \sum_{i=0}^{3} 2^{16i} \cdot \pending_i.\ctone$.
+    \item Compute $\cbal.\cttwo := \cbal.\cttwo + \sum_{i=0}^{3} 2^{16i} \cdot \pending_i.\cttwo$.
+    \item Set $\pending_i := (\cO, \cO)$ for all $i \in [0,3]$ and $\pendcnt := 0$.
+    \item Output the old pending values $\{\pending_i\}_{i \in [0,3]}$ in the transaction receipt.
+\end{enumerate}
+%
+Rollover does \emph{not} update \blob; the owner submits a separate \texttt{updateBlob} transaction.
+
+\one 
+\para{Off-chain: blob update.}
+After rollover, $\blob$ no longer correctly encrypts the current balance. The owner performs:
+%
+\begin{enumerate}[nosep]
+    \item Decrypt the old $\blob$ to recover the previous balance.
+    \item Decrypt each pending chunk from the receipt using $\dk$ (four 32-bit DLP solves).
+    \item Compute the new balance $b := b_{\rm old} + \sum_{i=0}^{3} 2^{16i} \cdot v_i^{\rm pend}$.
+    \item Recompute \blob\ per~\S\ref{sec:recovery}.
+\end{enumerate}
+%
+The owner sends the new $\blob$ via an \texttt{updateBlob} transaction $(\owner, \asset, \blob)$.
+The chain checks $\texttt{msg.sender} = \owner$ and stores the new $\blob$ without checking a proof.
+
+\para{Unknown blinding factor.}
+After rollover, $\rcur$ mixes in randomness from other senders, so the owner no longer knows it.
+The owner must therefore re-encrypt $\cbal$ under a fresh opening (\S\ref{sec:reencrypt}) before the next outgoing transfer.

@@ -1,0 +1,35 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\input{packages}
+\input{macros}
+
+\newif\ifcomments
+\commentstrue
+
+\ifcomments
+    \newcommand{\todo}[1]{\textsf{\color{red}{[Todo: {#1}]}}}
+    \newcommand{\note}[1]{\textsf{\color{red}{[Note: {#1}]}}}
+    \newcommand{\sd}[1]{{\small\color{blue}{[Sourav: {#1}]}}}
+    \newcommand{\hl}[1]{{\color{purple}{#1}}}
+\else
+    \newcommand{\todo}[1]{}
+    \newcommand{\sd}[1]{}
+    \newcommand{\note}[1]{}
+\fi
+
+\title{Confidential Monad: Implementation Specification}
+\author{Category Labs}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\input{sections/design}
+\newpage
+\input{sections/implementation}
+
+\bibliographystyle{plain}
+\bibliography{references,crypto}
+
+\end{document}

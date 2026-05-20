@@ -1,0 +1,36 @@
+\subsection{Re-Encryption}
+\label{sec:reencrypt}
+
+When the wallet does not know $\rcur$ (after rollover, or after losing local state), the owner must \emph{re-encrypt} $\cbal$ under a fresh opening before any outgoing transfer.
+The owner knows $b$ (from $\blob$ or local state), samples $r_{\rm fresh} \getsr \Z_p$, and computes $\cbal_{\rm new} = \Enc(b;\, r_{\rm fresh})$.
+
+\para{Proving and verifying correctness of re-encryption.}
+Let $D := \cbal_{\rm old} - \cbal_{\rm new}$; since both encrypt $b$, $D = ((\rcur - r_{\rm fresh})\,\dk\,\genH,\, (\rcur - r_{\rm fresh})\,\genH)$.
+The prover shows $D.\ctone = \dk \cdot D.\cttwo$.
+Let $\tagr$ denote the rerand challenge tag.
+
+\two
+\uemph{Generating the proof.}
+%
+\begin{itemize}[itemsep=.5pt]
+    \item Sample $\alpha \getsr \Z_p$.
+    \item Let $A_H := \alpha \cdot \genH$, and $A_D := \alpha \cdot D.\cttwo$.
+    \item Let $c := \hash(\tagr \cat \ek \cat D \cat A_H \cat A_D)$.
+    \item Let $s := \alpha + c \cdot \dk$.
+    \item Output $\RerandProof = (c, s)$.
+\end{itemize}
+
+\two
+\uemph{Verifying on-chain.}
+\begin{itemize}[itemsep=0.5pt]
+    \item Let $A'_H := s \cdot \genH - c \cdot \ek$ and $A'_D := s \cdot D.\cttwo - c \cdot D.\ctone$.
+    \item Let $c' := \hash(\tagr \cat \ek \cat D \cat A'_H \cat A'_D)$.
+    \item Accept iff $c = c'$.
+\end{itemize}
+
+\para{Re-encryption transaction.}
+The owner sends $(\asset, \cbal_{\rm new}, \blob', \RerandProof)$, where $\blob'$ is the recovery blob (\S\ref{sec:recovery}) for $\cbal_{\rm new}$.
+The chain checks $\texttt{msg.sender} = \owner$, verifies $\RerandProof$, sets $\cbal := \cbal_{\rm new}$, and stores $\blob'$.
+The owner then sets $\rcur := r_{\rm fresh}$ locally.
+
+% The DLEQ guarantees $\cbal_{\rm new}$ encrypts the same value as $\cbal_{\rm old}$, so the chain requires no range proof.

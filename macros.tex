@@ -1,0 +1,677 @@
+%%
+%% crypto macros
+%% mostly just style file for crypto papers by
+%% Alex J. Malozemoff < amaloz [at] cs [dot] umd [dot] edu >
+%%
+%% Updates by: Aayush Yadav < ayadav5 [at] gmu [dot] edu >
+%%
+
+\newcommand{\hlc}[1]{\textcolor{red}{#1}}
+\newcommand{\new}[1]{\textcolor{blue}{#1}}
+
+
+
+
+\mathchardef\mhyphen="2D
+\newcommand{\secp}{\ensuremath{\lambda\xspace}} % Computational security
+\newcommand{\ssecp}{\ensuremath{\kappa\xspace}} % Statistical security
+
+\newcommand{\ro}{\textsf{H}}
+\newcommand{\rog}{\textsf{G}}
+\newcommand{\kcp}{k_{\sf cp}}
+
+% --- theorem environments (keep one consistent block) ---
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}{Claim}
+\newtheorem{assumption}{Assumption}[section]
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+% Define a new environment for proof sketches
+\newenvironment{proofsketch}{%
+  \renewcommand{\qedsymbol}{$\square$}%
+  \begin{proof}[Proof sketch]%
+}{%
+  \end{proof}%
+}
+
+
+\newcommand{\para}[1]{\medskip\noindent\textbf{#1}}
+\newcommand{\one}{\vspace{1mm}}
+\newcommand{\two}{\vspace{2mm}}
+\newcommand{\codecomment}[1]{\textcolor{gray}{\emph{// #1}}}
+
+\newcommand{\uemph}[1]{\smallskip\emph{\underline{#1}}}
+
+
+\newcommand{\pke}[1]{\pk_{{\rm eph},#1}}
+\newcommand{\ske}[1]{\sk_{{\rm eph},#1}}
+
+% Shorthand for cref style references
+\Crefname{equation}{Eq.}{Eqs.}
+\Crefname{figure}{Fig.}{Figs.}
+\Crefname{definition}{Def.}{Defs.}
+\Crefname{theorem}{Theorem}{Theorem.}
+\Crefname{tabular}{Tab.}{Tabs.}
+\crefname{algocfline}{line}{lines}
+\Crefname{algocfline}{Line}{Lines}
+\Crefname{app}{App.}{Apps.} 
+\crefname{appendix}{Appendix}{Appendices}
+\Crefname{appendix}{Appendix}{Appendices}
+\newcommand{\namedref}[2]{\hyperref[#2]{#1~\ref{#2}}}
+
+% cryptocode procedure blocks
+\createprocedureblock{protocol}{center, boxed}{}{}{}
+
+% --- colors / hypersetup (kept once) ---
+\definecolor{darkred}{rgb}{0.5, 0, 0} 
+\definecolor{darkgreen}{rgb}{0, 0.5, 0} 
+\definecolor{darkblue}{rgb}{0,0.2,0.13} 
+
+\hypersetup{
+	colorlinks=true,
+	linkcolor=darkred,
+	citecolor=darkgreen,
+	urlcolor=darkblue   
+}
+
+\newcommand{\dblangle}[1]{\langle\!\langle #1 \rangle\!\rangle}
+% \newcommand{\cmsg}[1]{{\ensuremath{\langle #1 \rangle_{\cC}}}}
+% \newcommand{\imsg}[1]{{\ensuremath{\langle #1 \rangle_{\cI}}}}
+
+
+% --- general macros ---
+\newcommand{\hyb}[1]{\ensuremath{\mathbf{H}_{#1}}}
+
+\newcommand{\cbrace}[1]{\ensuremath{\left\{#1\right\}}}
+\newcommand{\parens}[1]{\ensuremath{\left( #1 \right)}}
+\newcommand{\brackt}[1]{\ensuremath{\left[ #1 \right]}}
+\newcommand{\anglbr}[1]{{\ensuremath{\left\langle #1 \right\rangle}}}
+
+\newcommand{\ii}{{(i)}} % index i
+% \newcommand{\ij}{{(j)}} % index j
+\newcommand{\ik}{{(k)}} % index k
+
+\newcommand{\NP}{\ensuremath{\mathsf{NP}}\xspace}
+\newcommand{\SSS}{\ensuremath{\mathsf{SSS}}\xspace}
+\newcommand{\ppt}{\textsc{ppt}\xspace}
+\renewcommand{\negl}{\ensuremath{\mathsf{negl}}\xspace}
+\newcommand{\binlam}{\ensuremath{\{0, 1\}^\lambda}\xspace}
+\newcommand{\seclam}{\ensuremath{1^\lambda}\xspace}
+\newcommand{\secadv}{\ensuremath{\mathsf{Adv}}} % security advantage
+\newcommand{\neglam}{\ensuremath{\mathsf{negl}(\lambda)}\xspace}
+\newcommand{\epslam}{\ensuremath{\epsilon(\lambda)}\xspace}
+\renewcommand{\poly}{\mathsf{poly}}
+\newcommand{\polylam}{\mathsf{poly}(\lambda)}
+\newcommand{\polylog}[1]{\mathsf{polylog}(#1)}
+\newcommand{\accept}{{\ensuremath{\mathbf{accept}}}\xspace}
+\newcommand{\reject}{{\ensuremath{\mathbf{reject}}}\xspace}
+\newcommand{\addr}{{\ensuremath{\mathsf{addr}}}\xspace}
+\newcommand{\rnd}{\ensuremath{\mathsf{rnd}}}
+\newcommand{\req}{\ensuremath{\mathsf{req}}}
+\newcommand{\res}{\ensuremath{\mathsf{res}}}
+
+\newcommand{\pcrequire}{{\rm {\bf require}}~}
+\newcommand{\pcsend}{{\rm {\bf send}}~}
+% \newcommand{\pcparse}{{\rm {\bf parse}}~}
+
+% symbols
+\newcommand{\from}{\ensuremath{\leftarrow}\xspace}
+\newcommand{\defeq}{\stackrel{\mbox{\tiny{def}}}{=}}
+\newcommand{\iseq}{\stackrel{\mbox{\tiny{?}}}{=}}
+\newcommand{\cat}{\ensuremath{\vert\vert}}
+
+% distributions
+\newcommand{\distr}{\ensuremath{\mathscr{D}}}
+\newcommand{\unif}{\ensuremath{\mathscr{U}}}
+\renewcommand{\prf}{\ensuremath{\mathsf{PRF}}\xspace}
+\renewcommand{\prp}{\ensuremath{\mathsf{P}}\xspace}
+
+% algebraic structures
+\newcommand{\Gr}{\ensuremath{\mathbb{G}}} % group
+\newcommand{\Ri}{\ensuremath{\mathcal{R}}} % ring
+\newcommand{\Id}{\ensuremath{\mathcal{I}}} % ideal of ring
+\newcommand{\Fd}{\ensuremath{\mathbb{F}}} % finite field
+
+% cryptographic objects
+\newcommand{\oracl}{\ensuremath{\mathcal{O}}} % oracle
+\newcommand{\lang}{{\ensuremath{\mathcal{L}}}\xspace}
+\newcommand{\alg}{{\ensuremath{\mathsf{alg}}}\xspace}
+\newcommand{\mx}{{\ensuremath{\mathsf{max}}}\xspace}
+\newcommand{\rel}{{\ensuremath{\mathscr{R}}}\xspace}
+\newcommand{\crkt}{{\ensuremath{\mathsf{C}}}\xspace}
+\renewcommand{\pol}{{\ensuremath{\mathsf{P}}\xspace}}
+\newcommand{\hfam}{{\ensuremath{\mathcal{H}}}\xspace}
+\makeatletter
+\newcommand{\pair}{\@ifnextchar({\pairwithargs}{\ensuremath{\circ}\xspace}}
+\def\pairwithargs(#1,#2){\ensuremath{#1 \circ #2}}
+\makeatother
+\newcommand{\ins}{{\ensuremath{\mathscr{x}}}\xspace}
+\newcommand{\wit}{{\ensuremath{\mathscr{w}}}\xspace}
+\newcommand{\mtroot}{{\ensuremath{\mathsf{root}}}\xspace}
+
+\newcommand{\pb}{{\ensuremath{\mathsf{pb}}}\xspace}
+\newcommand{\pv}{{\ensuremath{\mathsf{pv}}}\xspace}
+
+% boldface math alpha
+\newcommand{\vect}[1]{\ensuremath{\mathbf{#1}}}
+\newcommand{\vecT}[1]{\ensuremath{\mathbf{#1}^\mathsf{T}}} % transpose
+\newcommand{\gvect}[1]{\ensuremath{\boldsymbol{#1}}}
+
+% useful vectors -- roman
+
+
+\foreach \l in {a,...,z}{
+  \expandafter\newcommand\csname \l vec\endcsname{\ensuremath{\mathbm{\l}}}
+}
+
+% useful matrices
+\foreach \l in {A,...,Z}{
+  \expandafter\newcommand\csname \l mat\endcsname{\ensuremath{\mathbm{\l}}}
+}
+
+\makeatletter
+% Loop through all lowercase letters
+\@tfor\@tempa:=abcdefghijklmnopqrstuvwxyz\do{%
+  % Define \bma, \bmb, ..., \bmz as shortcuts for \bm{a}, \bm{b}, ..., \bm{z}
+  \expandafter\edef\csname bm\@tempa\endcsname{%
+    \noexpand\bm{\@tempa}%
+  }%
+
+  \expandafter\edef\csname tl\@tempa\endcsname{%
+    \noexpand\tilde{\@tempa}%
+  }%
+}
+\makeatother
+
+
+\renewcommand{\tll}{\ensuremath{\tilde{\ell}}}
+
+
+\makeatletter
+% Loop through all uppercase letters
+\@tfor\@tempa:=ABCDEFGHIJKLMNOPQRSTUVWXYZ\do{%
+  % \cA, \cB, ..., \cZ -> \mathcal{A}, ...
+  \expandafter\edef\csname 
+  c\@tempa\endcsname{\noexpand\mathcal{\@tempa}}%
+  % \bA, \bB, ..., \bZ -> \mathbb{A}, ...
+  \expandafter\edef\csname bb\@tempa\endcsname{\noexpand\mathbb{\@tempa}}%
+  % \sA, \sB, ..., \sZ -> \mathsf{A}, ...
+  \expandafter\edef\csname s\@tempa\endcsname{\noexpand\mathsf{\@tempa}}%
+    \expandafter\edef\csname bm\@tempa\endcsname{%
+    \noexpand\bm{\@tempa}%
+  }%
+}
+\makeatother
+
+% useful vectors -- greek
+\newcommand{\agvec}{\ensuremath{\boldsymbol{\alpha}}}
+\newcommand{\bgvec}{\ensuremath{\boldsymbol{\beta}}}
+\newcommand{\kgvec}{\ensuremath{\boldsymbol{\kappa}}}
+\newcommand{\mgvec}{\ensuremath{\boldsymbol{\mu}}}
+\newcommand{\ngvec}{\ensuremath{\boldsymbol{\nu}}}
+\newcommand{\pgvec}{\ensuremath{\boldsymbol{\pi}}}
+\newcommand{\rgvec}{\ensuremath{\boldsymbol{\rho}}}
+\newcommand{\sgvec}{\ensuremath{\boldsymbol{\sigma}}}
+\newcommand{\tgvec}{\ensuremath{\boldsymbol{\tau}}}
+\newcommand{\ugvec}{\ensuremath{\boldsymbol{\upsilon}}}
+\newcommand{\thgvec}{\ensuremath{\boldsymbol{\theta}}}
+
+
+
+
+\renewcommand{\vec}[1]{\ensuremath{\mathbf{#1}}\xspace}
+% \newcommand{\mtr}[1]{\ensuremath{\mathbf{#1}}\xspace}. %Matrix
+% \newcommand{\getsr}{\overset{\$}{\leftarrow}}   % Random sampling
+\newcommand{\getsr}{\leftarrow\mathrel{\scriptstyle\$}}
+% ========================================
+%  Common mathematical sets
+% ========================================
+
+\newcommand{\N}{\bbN}     % Natural numbers
+\newcommand{\Z}{\bbZ}     % Integers
+\newcommand{\R}{\bbR}     % Real numbers
+% \newcommand{\F}{\bbF}     % Finite field
+\newcommand{\F}{\bbZ_p}     % Finite field
+\newcommand{\G}{\bbG}     % Group
+\newcommand{\zo}{\ensuremath{\{0, 1\}\xspace}}    % Binary set
+
+
+\newcommand{\hell}{\hat{\ell}}
+%
+\newcommand{\g}[1]{\ensuremath{[\hspace{-1.5px}[#1]\hspace{-1.5px}]}\xspace} % Arbitrary group
+\newcommand{\gone}[1]{\ensuremath{\g{#1}_1}\xspace}  % Element of G1
+\newcommand{\gtwo}[1]{\ensuremath{\g{#1}_2}\xspace}  % Element of G2
+\newcommand{\gtar}[1]{\ensuremath{\g{#1}_T}\xspace}  % Element of GT
+\newcommand{\gOne}{\gone{1}} % Generator for G1
+\newcommand{\gTwo}{\gtwo{1}} % Generator for G2
+\newcommand{\gTar}{\gtar{1}} % Generator for GT
+\newcommand{\eki}{\textsf{ek}_{\rm iss}}
+\newcommand{\pki}{\pk_{\rm iss}}
+\newcommand{\qi}{q_{\rm iss}}
+\newcommand{\qe}{q_{\rm ex}}
+\newcommand{\ski}{\sk_{\rm iss}}
+\newcommand{\iss}{{\rm iss}}
+\newcommand{\pkc}{\pk_{\rm c}}
+\newcommand{\skc}{\sk_{\rm c}}
+\newcommand{\pkr}{\pk_{\rm ref}}
+\newcommand{\skr}{\sk_{\rm ref}}
+\newcommand{\pkeph}{\pk_{\rm eph}}
+\newcommand{\skeph}{\sk_{\rm eph}}
+\newcommand{\pkds}{\pk_{\rm ds}}
+\newcommand{\ellt}{\ell_{\rm t}}
+\newcommand{\ellr}{\ell_{\rm ref}}
+\newcommand{\ells}{\ell_{\rm s}}
+\newcommand{\elli}{\ell_{\rm iss}}
+\renewcommand{\eth}{\textsf{ETH}\xspace}
+\newcommand{\ggen}{\mathsf{GGen}}
+\newcommand{\toki}{\mathsf{tok}_{\rm iss}}
+\newcommand{\tokc}{\mathsf{tok}_{\rm c}}
+\newcommand{\tokr}{\mathsf{tok}_{\rm r}}
+\newcommand{\commit}{\mathsf{Commit}}
+\newcommand{\auth}{\mathsf{auth}}
+\newcommand{\aux}{\mathsf{aux}}
+\newcommand{\ad}{\mathsf{ad}}
+\newcommand{\tok}{\mathsf{tok}}
+\newcommand{\rtxn}{\mathsf{rtxn}}
+\newcommand{\txn}{\mathsf{txn}}
+\newcommand{\txnw}{\mathsf{txn}_{\sf wd}}
+\newcommand{\txid}{\mathsf{txid}}
+\newcommand{\hrho}{\hat{\rho}}
+\newcommand{\sid}{\mathsf{sid}}
+% \newcommand{\idata}{\mathsf{idata}}
+\newcommand{\Com}{\mathsf{Com}}
+\newcommand{\NIZK}{\mathsf{NIZK}}
+\newcommand{\prove}{\mathsf{Prove}}
+\newcommand{\com}{\mathsf{com}}
+\newcommand{\cm}{\mathsf{cm}}
+\newcommand{\seed}{\mathsf{seed}}
+\newcommand{\opening}{\mathsf{d}}
+\newcommand{\PRF}{\mathsf{PRF}}
+\newcommand{\Rseed}{\mathcal{R}_{\rm seed}}
+
+
+
+%--- Vector Commitment ---%
+\newcommand{\CS}{\mathsf{CS}}
+\newcommand{\VC}{\mathsf{VC}}
+\newcommand{\add}{\mathsf{Add}}
+\newcommand{\StUpdate}{\mathsf{StUpdate}}
+
+\newcommand{\ggm}{\ensuremath{\mathsf{GGM}}}
+
+\newcommand{\sti}{\mathsf{st}_{\cI}}
+\newcommand{\stc}{\mathsf{st}_{\cC}}
+
+
+\newcommand{\ExClient}{\mathsf{ExClient}}
+\newcommand{\ExIssuer}{\mathsf{ExIssuer}}
+\newcommand{\ExInit}{\mathsf{ExInit}}
+
+\newcommand{\Odl}{\cO\mhyphen\mathsf{DL}}
+\newcommand{\Ocdh}{\cO\mhyphen\mathsf{CDH}}
+\newcommand{\ORefund}{\cO\mhyphen\mathsf{Refund}}
+\newcommand{\OIssue}{\cO\mhyphen\mathsf{MIssue}}
+\newcommand{\OSpend}{\cO\mhyphen\mathsf{Spend}}
+\newcommand{\OExecute}{\cO\mhyphen\mathsf{Execute}}
+\newcommand{\OChal}{\cO\mhyphen\mathsf{Chal}}
+\newcommand{\OToken}{\cO\mhyphen\mathsf{Token}}
+
+
+
+\newcommand{\DS}{\mathsf{DS}}
+\newcommand{\AT}{\ensuremath{\mathsf{AT}}}
+\newcommand{\BAT}{\ensuremath{\mathsf{BAT}}\xspace}
+
+\newcommand{\register}{\mathsf{Register}}
+\newcommand{\retire}{\mathsf{Retire}}
+\newcommand{\open}{\mathsf{Open}}
+\newcommand{\setup}{\mathsf{Setup}}
+\newcommand{\kgen}{\mathsf{KGen}}
+\newcommand{\ikgen}{\mathsf{IssKGen}}
+\newcommand{\ckgen}{\mathsf{CKGen}}
+% \newcommand{\rkgen}{\mathsf{RefKGen}}
+\newcommand{\submitReq}{\mathsf{SubmitReq}}
+\newcommand{\blind}{\mathsf{Blind}}
+\newcommand{\missue}{\mathsf{MIssue}}
+\newcommand{\PiMissue}{\Pi\mhyphen\mathsf{MIssue}}
+\newcommand{\mverify}{\mathsf{MVerify}}
+\newcommand{\execute}{\mathsf{Execute}}
+\newcommand{\PiExecute}{\Pi\mhyphen\mathsf{Execute}}
+\newcommand{\recover}{\mathsf{Recover}}
+\newcommand{\unblind}{\mathsf{Unblind}}
+\newcommand{\issuer}{\ensuremath{\mathsf{Issuer}}}
+\newcommand{\env}{\ensuremath{\cE}}
+\newcommand{\client}{\ensuremath{\mathsf{Client}}}
+\renewcommand{\verify}{{\mathsf{Verify}}}
+\newcommand{\tokgen}{\mathsf{TokGen}}
+\newcommand{\tokverify}{\mathsf{TokVerify}}
+\newcommand{\spend}{\mathsf{Spend}}
+\newcommand{\reqRef}{\mathsf{ReqRefund}}
+\newcommand{\genref}{\mathsf{GenRefund}}
+% \newcommand{\PiRef}{\Pi\mhyphen\mathsf{Refund}}
+\newcommand{\Refund}{\mathsf{Refund}}
+\newcommand{\verifyRef}{\mathsf{VerifyRefund}}
+\newcommand{\tsigma}{\tilde{\sigma}}
+\newcommand{\money}{{\color{green}{\$}}}
+\newcommand{\refund}{\mathsf{Refund}}
+\newcommand{\balances}{\mathsf{bal}}
+\newcommand{\escrows}{\mathsf{esc}}
+\newcommand{\issued}{\mathsf{Niss}}
+\newcommand{\spent}{\mathsf{Nspent}}
+\newcommand{\refunded}{\mathsf{Nref}}
+\newcommand{\refundset}{\mathsf{refundset}}
+\newcommand{\sessions}{\mathsf{sessions}}
+\newcommand{\signed}{\mathsf{Nsigned}}
+\newcommand{\retired}{\mathsf{retired}}
+\newcommand{\nullifierset}{\mathsf{Nullifiers}}
+\newcommand{\comw}{\ensuremath{\com_w}}
+\newcommand{\openw}{\ensuremath{d_w}}
+\newcommand{\comvc}{\ensuremath{\com_y}}
+\newcommand{\auxvc}{\ensuremath{d_y}}
+\newcommand{\comauxvc}{\ensuremath{\com_z}}
+\newcommand{\openauxvc}{\ensuremath{d_z}}
+
+
+\newcommand{\numi}{\ensuremath{N_\textsf{iss}}}
+\newcommand{\nume}{\ensuremath{N_\textsf{ex}}}
+\newcommand{\numr}{\ensuremath{N_\textsf{ref}}}
+\newcommand{\nums}{\ensuremath{N_\textsf{spd}}}
+\newcommand{\numif}{\ensuremath{N_\textsf{iss}^*}}
+\newcommand{\numef}{\ensuremath{N_\textsf{ex}^*}}
+
+% \newcommand{\refund}{\mathsf{ref}}
+
+% --- Cryptographic Asusmptions and Advantages
+\newcommand{\ccdh}{\ensuremath\textsf{co\mhyphen CDH}}
+\newcommand{\ecoll}{\ensuremath{\varepsilon_\textsf{coll}}}
+\newcommand{\eforge}{\ensuremath{\varepsilon_{\sigma}}}
+\newcommand{\eks}{\ensuremath{\varepsilon_\textsf{ext}}}
+\newcommand{\eddh}{\ensuremath{\varepsilon_\textsf{ddh}}}
+\newcommand{\ecdh}{\ensuremath{\varepsilon_\textsf{cdh}}}
+\newcommand{\eomcdh}{\ensuremath{\varepsilon_\textsf{om\mhyphen cdh}}}
+\newcommand{\eomdl}{\ensuremath{\varepsilon_\textsf{om\mhyphen dl}}}
+
+\newcommand{\edl}{\ensuremath{\varepsilon_\textsf{dl}}}
+
+\newcommand{\rt}{\ensuremath{\textsf{root}}}
+
+
+\newcommand{\enizk}{\ensuremath{\varepsilon_{\rm nizk\mhyphen fail}}}
+\newcommand{\efinv}{\ensuremath{\varepsilon_\F}}
+
+
+%-- Real Ideal---
+
+\newcommand{\Ideal}{{\ensuremath{\mathsf{Ideal}_{\fname,\cS,\Sigma}}}\xspace}
+\newcommand{\Real}{{\ensuremath{\mathsf{Real}_{\name,\cA,\Sigma}}}\xspace}
+
+
+% security games / notions
+\newcommand{\Adv}{{\ensuremath{\mathsf{Adv}}}\xspace}
+\newcommand{\INDCPA}{{\ensuremath{\mathsf{IND\textsf{-}CPA}}}\xspace}
+\newcommand{\INDCCA}{{\ensuremath{\mathsf{IND\textsf{-}CCA}}}\xspace}
+\newcommand{\Unf}{{\ensuremath{\mathsf{Unf}}}\xspace}
+\newcommand{\EUnf}{{\ensuremath{\mathsf{EUnf}}}\xspace}
+\newcommand{\Snd}{{\ensuremath{\mathsf{Snd}}}\xspace}
+\newcommand{\KSnd}{{\ensuremath{\mathsf{KSnd}}}\xspace}
+\newcommand{\SimExt}{{\ensuremath{\mathsf{SimExt}}}\xspace}
+\newcommand{\Rogue}{{\ensuremath{\mathsf{Rogue}}}\xspace}
+\newcommand{\Sim}{{\ensuremath{\mathsf{Sim}}}\xspace}
+
+
+\newcommand{\gameRef}{\ensuremath{\cG^{\BAT,\env}_\textsf{refund\mhyphen fair}}}
+\newcommand{\gameSol}{\ensuremath{\cG^{\BAT, \env}_\textsf{sol}}}
+\newcommand{\gameADB}{\ensuremath{\cG^{\BAT, \env, \cA}_\textsf{adb}}}
+\newcommand{\gameCor}{\ensuremath{\cG^{\BAT, \env}_\textsf{cor}}}
+\newcommand{\gameUnlink}{\ensuremath{\cG^{\BAT, \env, \cA}_\textsf{unlink}}}
+\newcommand{\gameIFair}{\ensuremath{\cG^{\BAT, \env,\cA}_\textsf{issuer\mhyphen fair}}}
+\newcommand{\gameCFair}{\ensuremath{\cG^{\BAT, \env,\cA}_\textsf{client\mhyphen fair}}}
+\newcommand{\gameOMCDH}{\ensuremath{\cG^{\cA}_\omcdh}}
+
+\newcommand{\gameOMDL}{\ensuremath{\cG^{\cA}_\omdl}}
+
+
+\newcommand{\advad}{{\ensuremath{ \cA_\mathsf{ad}}}\xspace}
+\newcommand{\bdvds}{{\ensuremath{ \cB_\mathsf{ds}}}\xspace}
+
+\newcommand{\dl}{{\ensuremath{\mathsf{DL}}}\xspace}
+% hardness assumptions
+\newcommand{\dlog}{{\ensuremath{\mathsf{dlog}}}\xspace}
+\newcommand{\qdlog}{{\ensuremath{\mathsf{q\textsf{-}DLOG}}}\xspace}
+\newcommand{\cdh}{{\ensuremath{\mathsf{CDH}}}\xspace}
+\newcommand{\ddh}{{\ensuremath{\mathsf{DDH}}}\xspace}
+\newcommand{\iddh}{{\ensuremath{\mathsf{InvDDH}}}\xspace}
+\newcommand{\sddh}{{\ensuremath{\mathsf{sDDH}}}\xspace}
+\newcommand{\dbdh}{{\ensuremath{\mathsf{DBDH}}}\xspace}
+
+\newcommand{\omcdh}{{\ensuremath{\mathsf{om CDH}}}\xspace}
+
+\newcommand{\omdl}{{\ensuremath{\mathsf{omDL}}}\xspace}
+
+\newcommand{\agm}{{\ensuremath{\mathsf{AGM}}}\xspace}
+
+\newcommand{\Alg}{\ensuremath{\textsf{Alg}}\xspace}
+
+
+% variables
+\newcommand{\gp}{\ensuremath{\mathsf{gp}}\xspace}
+\renewcommand{\pp}{\ensuremath{\mathsf{pp}}\xspace}
+\newcommand{\crs}{{\ensuremath{\mathsf{crs}}}\xspace}
+\renewcommand{\exp}{\ensuremath{\mathsf{exp}}}
+\newcommand{\cur}{\ensuremath{\mathsf{cur}}}
+\newcommand{\out}{\ensuremath{O}}
+\newcommand{\inn}{\ensuremath{I}}
+\newcommand{\syn}{\ensuremath{\mathsf{syn}}\xspace}
+\newcommand{\mg}{\ensuremath{\mathsf{m}}\xspace}
+\newcommand{\ct}{\ensuremath{\mathsf{ct}}\xspace}
+\newcommand{\nonce}{\mathsf{nonce}}
+
+\newcommand{\pos}{\textsf{pos}}
+\newcommand{\ctr}{\textsf{ctr}}
+\newcommand{\chal}{\mathsf{chal}}
+
+
+% misc keys
+\newcommand{\usk}{{\ensuremath{\mathsf{usk}}}\xspace}
+\newcommand{\upk}{{\ensuremath{\mathsf{upk}}}\xspace}
+
+\newcommand{\amt}{{\ensuremath{A}}\xspace}
+
+
+
+% PKE
+\newcommand{\PKE}{{\ensuremath{\mathsf{PKE}}}\xspace}
+\newcommand{\Enc}{{\ensuremath{\mathsf{Enc}}}\xspace}
+\newcommand{\Dec}{{\ensuremath{\mathsf{Dec}}}\xspace}
+\newcommand{\PKEKeyGen}{\PKE.\KeyGen}
+\newcommand{\PKEEnc}{\PKE.\Enc}
+\newcommand{\PKEDec}{\PKE.\Dec}
+\newcommand{\PKEtuple}{\ensuremath{\parens{\allowbreak\PKEKeyGen, \allowbreak\PKEEnc, \allowbreak\PKEDec}}\xspace}
+
+
+\newcommand{\rgets}{\leftarrow\mathrel{\scriptstyle\$}}
+\newcommand{\msgi}[1]{\langle {#1} \rangle}
+\newcommand{\AUDIT}{{\tt AUDIT}}
+\newcommand{\WITHDRAW}{{\tt WITHDRAW}}
+\newcommand{\DEPOSIT}{{\tt DEPOSIT}}
+
+%%%%
+%%%% SAPS Protocol Macros
+%%%%
+
+% Protocol name (change \name to rename throughout)
+\newcommand{\ups}{UPS}
+\newcommand{\name}{\ensuremath{\mathsf{UPay}}}
+\newcommand{\fname}{\ensuremath{\cF_{\rm \ups}}}
+
+% Parties
+\newcommand{\CP}{\ensuremath{\mathsf{CP}}\xspace}
+\newcommand{\TP}{\ensuremath{\mathsf{TP}}\xspace}
+
+% Party addresses
+\newcommand{\addru}{\ensuremath{\addr_U}\xspace}
+\newcommand{\addrm}{\ensuremath{\addr_M}\xspace}
+
+\newcommand{\bstate}{\ensuremath{\st_B}\xspace}
+\newcommand{\ek}{\textsf{ek}}
+\newcommand{\dk}{\textsf{dk}}
+
+% Keys
+\newcommand{\pkcp}{\ensuremath{\pk_\textsf{cp}}\xspace}
+\newcommand{\pku}{\ensuremath{\pk_U}}
+\newcommand{\pkm}{\ensuremath{\pk_M}}
+
+\newcommand{\skcp}{\ensuremath{\sk_\textsf{cp}}\xspace}
+\newcommand{\vkcp}{\ensuremath{\vk_\textsf{cp}}\xspace}
+\newcommand{\sku}{\ensuremath{\sk_U}}
+\newcommand{\vku}{\ensuremath{\vk_U}}
+\newcommand{\skm}{\ensuremath{\sk_M}}
+\newcommand{\vkm}{\ensuremath{\vk_M}}
+\newcommand{\ekm}{\ensuremath{\ek_M}}
+\newcommand{\dkm}{\ensuremath{\dk_M}}
+
+
+% CP audit database
+\newcommand{\adb}{\ensuremath{\textsf{DB}_\CP}\xspace}
+
+% Vault state (Merkle trees)
+\newcommand{\treeC}{\ensuremath{\cT_c}\xspace}
+\newcommand{\treeV}{\ensuremath{\cT_v}\xspace}
+
+\newcommand{\tC}{\ensuremath{T_c}\xspace}
+\newcommand{\tV}{\ensuremath{T_v}\xspace}
+
+\newcommand{\rtc}{\ensuremath{{\sf root}_c}\xspace}
+\newcommand{\rtv}{\ensuremath{{\sf root}_v}\xspace}
+
+% Hash functions (modeled as random oracles)
+\newcommand{\cHc}{\ensuremath{\mathsf{H}_c}\xspace}
+\newcommand{\cHn}{\ensuremath{\mathsf{H}_n}\xspace}
+
+% Protocol elements
+\newcommand{\sigcp}{\ensuremath{\sigma_{\rm cp}}\xspace}
+\newcommand{\stag}{\ensuremath{T}\xspace}
+\newcommand{\aout}{\ensuremath{A_{\rm out}}\xspace}
+
+% Interface names
+\newcommand{\cpkgen}{\mathsf{CPKGen}}
+\newcommand{\mkgen}{\mathsf{MKGen}}
+\newcommand{\ukgen}{\mathsf{UKGen}}
+\newcommand{\PiDeposit}{\Pi\mhyphen\mathsf{Deposit}}
+\newcommand{\discover}{\mathsf{Discover}}
+\newcommand{\withdraw}{\mathsf{Withdraw}}
+\newcommand{\audit}{\mathsf{Audit}}
+
+% Oracle names for security games
+\newcommand{\ODeposit}{\cO\mhyphen\mathsf{Dep}}
+\newcommand{\OWithdraw}{\cO\mhyphen\mathsf{With}}
+\newcommand{\OQuit}{\cO\mhyphen\mathsf{Quit}}
+
+% Security games for \name
+\newcommand{\gameCors}{\ensuremath{\cG^{\name,\env}_\textsf{cor}}}
+\newcommand{\gameMU}{\ensuremath{\cG^{\name,\env,\cA}_\textsf{m\mhyphen unlink}}}
+\newcommand{\gameSolvS}{\ensuremath{\cG^{\name,\env,\cA}_\textsf{sol}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  Confidential Monad (CM) macros
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Protocol name
+\newcommand{\CM}{\ensuremath{\mathsf{CM}}\xspace}
+
+% Parties and entities
+\newcommand{\CE}{\ensuremath{\mathsf{CE}}\xspace}
+
+% Generators and group
+\newcommand{\genG}{\ensuremath{G}\xspace}   % base-point generator
+\newcommand{\genH}{\ensuremath{H}\xspace}   % second generator (hash-to-curve)
+
+% Keys (reuse existing \ek, \dk from macros)
+\newcommand{\cesk}{\ensuremath{\sk_{\mathsf{ce}}}\xspace}
+\newcommand{\ceek}{\ensuremath{\ek_{\mathsf{ce}}}\xspace}
+\renewcommand{\vk}{\ensuremath{\mathsf{vk}}\xspace}
+
+% Sender/recipient encryption keys
+\newcommand{\eksnd}{\ensuremath{\ek_{\mathsf{snd}}}\xspace}
+\newcommand{\ekrcv}{\ensuremath{\ek_{\mathsf{rcv}}}\xspace}
+
+% Ciphertext components
+\newcommand{\ctone}{\ensuremath{C_1}\xspace}
+\newcommand{\cttwo}{\ensuremath{C_2}\xspace}
+
+% Transfer chunk components
+\newcommand{\Pchunk}[1]{\ensuremath{P_{#1}}}
+\newcommand{\Rsnd}[1]{\ensuremath{R^{\rm s}_{#1}}}
+\newcommand{\Rrcv}[1]{\ensuremath{R^{\rm r}_{#1}}}
+
+% Balance and pending
+\newcommand{\cbal}{\ensuremath{\mathsf{bal}}\xspace}
+\newcommand{\pending}{\ensuremath{\mathsf{pend}}\xspace}
+\newcommand{\rcur}{\ensuremath{r_{\rm cur}}\xspace}
+\newcommand{\pendcnt}{\ensuremath{\mathsf{cnt}}\xspace}
+
+% DH randomness
+\newcommand{\sharedsecret}{\ensuremath{\mathsf{ss}}\xspace}
+\newcommand{\cenonce}{\ensuremath{\eta}\xspace}
+\newcommand{\KDF}{\ensuremath{\mathsf{KDF}}\xspace}
+\newcommand{\HKDF}{\ensuremath{\mathsf{HKDF}}\xspace}
+
+% Hash-to-curve
+\newcommand{\HTC}{\ensuremath{\mathsf{HashToCurve}}\xspace}
+
+% Recovery blob
+\newcommand{\blob}{\ensuremath{\mathsf{blob}}\xspace}
+
+% Sigma proofs
+\newcommand{\TransferProof}{\ensuremath{\pi_{\rm xfer}}\xspace}
+\newcommand{\RerandProof}{\ensuremath{\pi_{\rm rerand}}\xspace}
+\newcommand{\RangeProof}{\ensuremath{\pi_{\rm rp}}\xspace}
+
+% CE authorization
+\newcommand{\ceauth}{\ensuremath{\sigma_{\rm ce}}\xspace}
+
+% Transaction types
+\newcommand{\Deposit}{\ensuremath{\mathsf{Deposit}}\xspace}
+\newcommand{\Rollover}{\ensuremath{\mathsf{Rollover}}\xspace}
+\newcommand{\Transfer}{\ensuremath{\mathsf{Transfer}}\xspace}
+\newcommand{\Withdraw}{\ensuremath{\mathsf{Withdraw}}\xspace}
+\newcommand{\Rerand}{\ensuremath{\mathsf{ReRand}}\xspace}
+
+% Group identity
+\newcommand{\identity}{\ensuremath{\mathcal{O}}\xspace}
+
+% Weighted sum
+\newcommand{\wsum}{\ensuremath{\textstyle\sum_{i=0}^{3} 2^{16i}}\xspace}
+
+% Account struct
+\newcommand{\CMAccount}{\ensuremath{\mathsf{CMAccount}}\xspace}
+\newcommand{\owner}{\ensuremath{\mathsf{owner}}\xspace}
+\newcommand{\cmaddr}{\ensuremath{\mathsf{cmaddr}}\xspace}
+\newcommand{\ceaddr}{\ensuremath{\mathsf{ceaddr}}\xspace}
+\newcommand{\snd}{{\sf snd}}
+\newcommand{\rcv}{{\sf rcv}}
+\newcommand{\hP}{\ensuremath{\hat{P}}\xspace}
+\newcommand{\hRsnd}{\ensuremath{\hat{R}_\snd}\xspace}
+\newcommand{\hRrcv}{\ensuremath{\hat{R}_\rcv}\xspace}
+\newcommand{\expiry}{\ensuremath{\mathsf{expiry}}\xspace}
+\newcommand{\old}{\ensuremath{\mathsf{old}}}
+\newcommand{\bnew}{\ensuremath{\mathsf{new}}}
+\newcommand{\tagr}{\ensuremath{\mathsf{tag}_r}\xspace}
+\newcommand{\tagt}{\ensuremath{\mathsf{tag}_t}\xspace}
+\newcommand{\tagc}{\ensuremath{\mathsf{tag}_c}\xspace}
+\renewcommand{\hash}{\ensuremath{\mathsf{Hash}}\xspace}
+
+\newcommand{\dest}{\ensuremath{\mathsf{dest}}\xspace}
+
+% Misc
+\newcommand{\val}{\ensuremath{\mathsf{val}}\xspace}
+\newcommand{\asset}{\ensuremath{\mathsf{asset}}\xspace}
+\newcommand{\chainid}{\ensuremath{\mathsf{cid}}\xspace}
+

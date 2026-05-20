@@ -1,0 +1,67 @@
+\subsection{Account Structure and Creation}
+\label{sec:account}
+
+\para{Account structure.}
+Each \CMAccount stores an encrypted balance for a single token using 128 bits to represent the balance.
+The on-chain state has two components: a \emph{main balance}~$\cbal$ (single twisted ElGamal ciphertext, $2$ group elements) and a \emph{pending balance}~$\pending_0, \ldots, \pending_3$.
+Incoming transactions accumulate in the pending balance until the owner issues a \emph{rollover}, which moves them into the main balance.
+
+For each account, the chain also maintains a counter $\pendcnt$ indicating the number of incoming transactions accumulated in the pending balance.
+The chain enforces $\pendcnt < 2^{16}$, and the rollover operation resets $\pendcnt$ to zero.
+
+The chain stores a per-operation \emph{CE nonce} $N_{\sf op}$ for ${\sf op} \in \{\Deposit, \Transfer, \Withdraw\}$.
+Each CM transaction carries a 64-bit $\cenonce$ and the chain accepts only if $\cenonce > N_{\sf op}$, then sets $N_{\sf op} := \cenonce$.
+
+Each account binds to an ordered list of $n$ \CE\ addresses $(\ceaddr_1, \ldots, \ceaddr_n)$ and a threshold $k \le n$, fixed at account creation.
+Every authorization supplies $k$ ECDSA signatures from $k$ distinct \CE s in the list; the chain verifies all $k$ via \texttt{ecrecover}.
+
+Each account also stores a 16-byte recovery blob~\blob, defined in~\S\ref{sec:recovery}.
+
+\input{tables/tab-account}
+
+\para{Account creation.}
+The user with on-chain EOA address $\addr$ selects a $k$-of-$n$ \CE\ committee $(\ceaddr_1, \ldots, \ceaddr_n)$ from the on-chain registry and requests authorization from $k$ of them.
+Each authorizing \CE\ signs an \texttt{DepositAuth} EIP-712 struct over $(\addr, \dest, \asset, \val, \cenonce, \expiry)$ with $\dest = \addr$.
+The user submits the following deposit transaction on-chain:
+%
+\[
+  (\dest, \asset, \val, \ek, k, [\ceaddr_1, \ldots, \ceaddr_n], \cenonce, \expiry, \sigma, \blob).
+\]
+The chain performs the following checks:
+%
+\begin{enumerate}[nosep]
+    \item Check $\texttt{msg.sender} = \addr_\snd$ and $\expiry \ge $ \texttt{block.timestamp}.
+    \item Verify $\sigma$ against the registered committee.
+    \item Check the recipient is fresh: $\owner = 0$ for the $(\dest, \asset)$ slot.
+\end{enumerate}
+
+
+On successful validation the chain sets $\owner := \dest$, stores \ek, $k$, the \CE\ list, writes \blob, initializes $\cbal := (\identity,\, \val \cdot \genG)$ (deterministic encryption with $r{=}0$), and sets $N_\Deposit^\dest := \cenonce$.
+The chain escrows the native \asset\ payment; for ERC-20 assets it calls a safe \texttt{transferFrom}.
+
+\para{Subsequent deposits.}
+
+\uemph{From owner (self-deposit).}
+%
+\begin{itemize}[itemsep=.5pt]
+    \item Owner submits $(\dest, \asset, \val, \cenonce, \expiry, \sigma, \blob')$ with $\dest = \texttt{msg.sender}$ and a fresh $\sigma$.
+    \item Chain checks $\cenonce > N_\Deposit^\dest$, verifies $\sigma$ against the registered committee, and updates $N_\Deposit^\dest := \cenonce$.
+    \item Chain adds $\val \cdot \genG$ to $\cbal.\cttwo$ only; $\cbal.\ctone$ is unchanged because $\Enc(\val, \ek, 0).\ctone = 0 \cdot \ek = \identity$.
+    \item Chain replaces \blob\ with the depositor-supplied $\blob'$.
+    \item Pending state ($\pending_i$, $\pendcnt$) untouched.
+\end{itemize}
+
+\uemph{From non-owner.}
+%
+\begin{itemize}[itemsep=.5pt]
+    \item Depositor obtains \CE\ signatures over $(\addr_\snd, \dest, \asset, \val, \cenonce, \expiry)$ with $\dest \ne \addr_\snd$, where the CEs are those bound to $(\dest, \asset)$.
+    \item Chain rejects if \texttt{pauseIncoming} is set on $(\dest, \asset)$ or if $\pendcnt_\dest \ge 2^{16}$.
+    \item Chain checks $\cenonce > N_\Deposit^\dest$, verifies $\sigma$, and updates $N_\Deposit^\dest := \cenonce$.
+    \item Chain splits \val\ into four 16-bit chunks $v_0, v_1, v_2, v_3$ and adds the deterministic encryption $(\identity,\, v_i \cdot \genG)$ to each $\pending_{\dest, i}$.
+    \item Chain increments $\pendcnt_\dest$.
+    \item \blob\ is unchanged.
+\end{itemize}
+
+\para{Incoming pause.}
+The owner can toggle a per-asset \texttt{pauseIncoming} flag.
+While set, the chain rejects non-owner deposits and incoming transfers but still permits self-deposits, rollovers, re-randomizations, and withdrawals.

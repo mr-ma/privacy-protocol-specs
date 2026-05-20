@@ -1,0 +1,22 @@
+\begin{table}[t]
+\small
+\centering
+\caption{On-chain \CMAccount structure (per token).}
+\label{tab:account}
+\begin{tabular}{@{}l l p{9.5cm}@{}}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+$\cmaddr$ & \texttt{address} & Address of the CM account \\
+$\owner$ & \texttt{address} & Account owner; authorized via \texttt{msg.sender} \\
+$\ek$             & 1 point          & Encryption key ($\dk \cdot \genH$) \\
+$\cbal$           & 1 ciphertext     & Main balance: single 128-bit encrypted value \\
+$\pending[0\ldotp\ldotp 3]$ & 4 ciphertexts & Pending balance: one ciphertext per 16-bit chunk \\
+$\pendcnt$        & \texttt{uint32}  & Incoming-transfer count since last \Rollover ($< 2^{16}$) \\
+$\blob$           & \texttt{bytes16} & KDF-encrypted balance for $O(1)$ recovery (\S\ref{sec:recovery}) \\
+$k$               & \texttt{uint8}   & \CE\ multisig threshold ($1 \le k \le n$) \\
+$\ceaddr[1\ldotp\ldotp n]$ & \texttt{address[]} & Ordered list of $n$ committee \CE\ addresses \\
+$N_\Deposit, N_\Transfer, N_\Withdraw$ & \texttt{uint64} & Per-operation latest accepted \cenonce; chain enforces monotonicity \\
+\bottomrule
+\end{tabular}
+\end{table}

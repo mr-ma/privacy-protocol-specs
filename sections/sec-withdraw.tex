@@ -1,0 +1,42 @@
+\subsection{Withdrawal}
+\label{sec:withdraw}
+%
+Let $\val$ be the amount an account owner with address $\snd$ wishes to withdraw from its CM account to its public address $\dest$.
+
+\one
+\para{Step 1: CE authorization.}
+The owner chooses a withdrawal amount $\val$ and requests authorization from its \CE\ committee.
+Each authorizing \CE\ signs an EIP-712 \texttt{WithdrawAuth} struct $(\snd, \dest, \asset, \val, \cenonce, \expiry)$.
+
+\one
+\para{Step 2: Range proof (simultaneous with Step~1).}
+The owner computes:
+%
+\begin{enumerate}[itemsep=.5pt]
+    \item Let $\cbal_\bnew := (\cbal.\ctone,\; \cbal.\cttwo - \val \cdot \genG)$.
+    \item Generate a 128-bit range proof on $\cbal_\bnew.\cttwo$ (proving $b - \val\ge 0$).
+\end{enumerate}
+%
+Here, $\cbal_\bnew.\ctone$ is unchanged  as $\Enc(\val, \ek, 0).\ctone = 0 \cdot \ek = \identity$.
+
+The account owner then sends the following withdrawal transaction:
+%
+\[
+  (\snd, \dest, \asset, \val, \blob, \RangeProof, \cenonce, \expiry, \sigma).
+\]
+
+\one
+\para{Step 3: On-chain verification and state update.}
+The contract performs:
+%
+\begin{enumerate}[nosep]
+  \item Check $\texttt{msg.sender} = \owner$.
+  \item Verify $\sigma$ via \texttt{ecrecover} against the \CE.
+  \item Check $\cenonce > N_\Withdraw^\snd$, then set $N_\Withdraw^\snd := \cenonce$.
+  \item Check $\expiry \ge \texttt{block.timestamp}$.
+  \item Compute $\cbal_\bnew$ as above.
+  \item Verify the range proof on $\cbal_\bnew.\cttwo$ against the $128$-bit length baked into the verifier.
+  \item Set $\cbal := \cbal_\bnew$.
+  \item Store the updated $\blob$.
+  \item Credit $\val$ to the destination address $\dest$.
+\end{enumerate}

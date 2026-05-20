@@ -1,0 +1,119 @@
+\subsection{Confidential Transfer}
+\label{sec:transfer}
+%
+A confidential transfer moves $\val$ from sender~$\snd$ (under $\CE_\snd$, encryption key $\eksnd$) to recipient~$\rcv$ (under $\CE_\rcv$, key $\ekrcv$).
+Steps 2--4 run in parallel; Step 5 is on-chain.
+We describe the single-\CE\ case; the multi-\CE\ extension is direct.
+
+\one
+\para{Step 1: Chunk encoding (sender).}
+%
+\begin{itemize}[itemsep=.5pt]
+    \item Decompose $\val = \sum_{i=0}^{3} v_i \cdot 2^{16i}$, where $v_i \in [0, 2^{16})$.
+    \item Derive blinding scalars $r_i := \HKDF(\sharedsecret;\, i)$ for $i \in [0,3]$ (more details in~\S\ref{impl:hkdf}).
+    \item Compute per chunk: $\Pchunk{i} := v_i \cdot \genG + r_i \cdot \genH$, $\Rsnd{i} := r_i \cdot \eksnd$, $\Rrcv{i} := r_i \cdot \ekrcv$.
+    \item Compute the committed total: $P_\val := \sum_{i=0}^{3} 2^{16i} \cdot \Pchunk{i}$.
+    \item Compute the new main balance:
+\end{itemize}
+%
+\begin{equation}\label{eq:bal-new}
+  \cbal_\bnew \;:=\; \bigl(\;\cbal_\old.\ctone - \textstyle\sum_{i=0}^{3} 2^{16i} \cdot \Rsnd{i},\;\;\cbal_\old.\cttwo - P_\val\;\bigr).
+\end{equation}
+%
+Here $P_\val$ is a Pedersen commitment to~$\val$.
+
+\one
+\para{Step 2: CE authorization.}
+The sender sends $(\val, \cenonce, \snd, \rcv, \asset)$ to its \CE.
+The \CE derives $r_i$, computes $P_\val$, checks compliance, and signs a \texttt{TransferAuth} struct $(\snd, \rcv, \asset, P_\val, \cenonce, \expiry)$.
+Here $\cenonce$ is a per-transaction 64-bit monotonic counter (reuse destroys privacy, and the chain rejects any reused value) and $\expiry$ is an on-chain enforceable expiry window.
+
+For cross-CE transfers ($\CE_\snd \neq \CE_\rcv$), both \CE s sign the same \texttt{TransferAuth} struct.
+Only the sender's \CE\ can locally derive $r_i$, so the sender forwards $(\snd, \rcv, \asset, P_\val, \cenonce, \expiry, \val)$ to the recipient's \CE, which stores the tuple for future audits.
+
+\one
+\para{Step 3: Transfer DLEQ proof.}
+The sender proves all four chunk triples are well-formed via a single discrete logarithm equality~(DLEQ) proof using \emph{random linear combination}.
+Let $\tagt, \tagc$ denote two unique fixed tags (bit strings).
+
+\two
+\uemph{Computing the random linear combination.}
+%
+\begin{itemize}[itemsep=.5pt]
+    \item Let $T_w := \tagt \cat \addr_\snd \cat \cbal_\old \cat \cbal_\bnew \cat \cenonce \cat \eksnd \cat \ekrcv \cat \bigl\{\Pchunk{i}, \Rsnd{i}, \Rrcv{i}\bigr\}_{i \in [0,3]}$.
+    \item Let $\gamma_0 := 1$, and $\gamma_i := \hash(T_w, i)$ for $i = 1, 2, 3$.
+    \item Compute $v_\gamma := \sum_{i=0}^{3} \gamma_i \cdot v_i$ and $r_\gamma := \sum_{i=0}^{3} \gamma_i \cdot r_i$.
+    \item Compute $\hP := \sum_{i=0}^{3} \gamma_i \cdot \Pchunk{i}$, $\hRsnd := \sum_{i=0}^{3} \gamma_i \cdot \Rsnd{i}$, $\hRrcv := \sum_{i=0}^{3} \gamma_i \cdot \Rrcv{i}$.
+\end{itemize}
+
+\two
+\uemph{Generating the proof.}
+%
+\begin{itemize}[itemsep=.5pt]
+    \item Sample $\alpha_v, \alpha_r \getsr \Z_p$.
+    \item Let $A_P := \alpha_v \cdot \genG + \alpha_r \cdot \genH$, $A_\snd := \alpha_r \cdot \eksnd$, $A_\rcv := \alpha_r \cdot \ekrcv$.
+    \item Let $c := \hash(\tagc \cat \hP \cat \hRsnd \cat \hRrcv \cat A_P \cat A_\snd \cat A_\rcv)$.
+    \item Let $s_v := \alpha_v + c \cdot v_\gamma$, $s_r := \alpha_r + c \cdot r_\gamma$.
+    \item Output $\TransferProof = (c, s_v, s_r)$.
+\end{itemize}
+
+\two
+\uemph{Verifying on-chain.}
+\begin{itemize}[itemsep=0.5pt]
+    \item Re-derive $\{\gamma_i\}_{i \in [0,3]}$ from $T_w$ and compute $\hP, \hRsnd, \hRrcv$.
+    \item Let $A'_P := s_v \cdot \genG + s_r \cdot \genH - c \cdot \hP$.
+    \item Let $A'_\snd := s_r \cdot \eksnd - c \cdot \hRsnd$, $A'_\rcv := s_r \cdot \ekrcv - c \cdot \hRrcv$.
+    \item Let $c' := \hash(\tagc \cat \hP \cat \hRsnd \cat \hRrcv \cat A'_P \cat A'_\snd \cat A'_\rcv)$.
+    \item Accept iff $c = c'$.
+\end{itemize}
+
+\one
+\para{Step 4: Range proofs.}
+The sender generates a single batched Bulletproof~\cite{bunz2018bulletproofs}:
+%
+\begin{itemize}[itemsep=.5pt]
+    \item 1$\times$128-bit range proof on $\cbal_\bnew.\cttwo$ (opening: value $b - \val$, blinding $\rcur - \sum_i 2^{16i} r_i$).
+    \item 4$\times$16-bit range proofs on each $\Pchunk{i}$ (opening: $v_i$, blinding $r_i$).
+\end{itemize}
+%
+
+The proof consists of four group points $(A, S, T_1, T_2)$, three scalars $(\tau_x, \mu, \hat{t})$, and an inner-product argument of $2 \log_2 n_{\rm pad}$ points plus 2 scalars ($n_{\rm pad} = 256$, yielding 16 points).
+
+\one
+The sender submits the following transfer transaction:
+%
+\[
+  (\snd, \rcv, \asset, \{\Pchunk{i}, \Rsnd{i}, \Rrcv{i}\}_{i \in [0,3]}, \cenonce, \blob, \TransferProof, \RangeProof, \sigma).
+\]
+%
+Here, $\TransferProof$ is the DLEQ proof and $\RangeProof$ is the range proof.
+
+\para{Step 5: On-chain verification and state update.}
+The contract performs the following checks:
+%
+\begin{enumerate}[nosep]
+  \item Check $\texttt{msg.sender} = \addr_\snd$.
+  \item Recompute $P_\val := \sum_{i=0}^{3} 2^{16i} \cdot \Pchunk{i}$ from calldata, then hash the EIP-712 \texttt{TransferAuth} struct over $(\snd, \rcv, \asset, P_\val, \cenonce, \expiry)$.
+  Verify $\sigma$ via \texttt{ecrecover} against the \CE\ addresses.
+  \item Check $\cenonce > N_\Transfer^\snd$, then set $N_\Transfer^\snd := \cenonce$.
+  \item Verify $\TransferProof$ using the procedure above.
+  \item Verify the Bulletproof on $(\cbal_\bnew.\cttwo,\, \Pchunk{0},\ldots, \Pchunk{3})$ against bit lengths $(128, 16, 16, 16, 16)$ baked into the verifier.
+  \item Check $\expiry \ge \texttt{block.timestamp}$, recipient exists, and $\pendcnt_\rcv < 2^{16}$.
+\end{enumerate}
+%
+\two
+Upon successful validation:
+%
+\begin{enumerate}[nosep]
+  \item Set $\cbal_\snd := \cbal_\bnew$ (cf.~\Cref{eq:bal-new}).
+  \item For each $i \in [0,3]$: set $\pending_{\rcv,i}.\ctone := \pending_{\rcv,i}.\ctone + \Rrcv{i}$ and $\pending_{\rcv,i}.\cttwo := \pending_{\rcv,i}.\cttwo + \Pchunk{i}$.
+  \item Increment $\pendcnt_\rcv$.
+  \item Store the updated $\blob_\snd$.
+\end{enumerate}
+%
+The sender locally updates $\rcur := \rcur - \sum_i 2^{16i} \cdot r_i$.
+
+\one
+\para{CE audit.}
+The sender's \CE re-derives $r_i$ from on-chain data and decrypts each chunk (\S\ref{sec:notation}); no per-transfer storage.
+The recipient's \CE records what it learns during Step~2.

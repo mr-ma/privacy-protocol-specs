@@ -1,0 +1,40 @@
+\subsection{Notation and Primitives}
+\label{sec:notation}
+
+\para{Group and generators.}
+Let $\G$ be a prime-order group of order $p$ with two independent generators $\genG$ and $\genH$ (no known discrete-log relation).
+We use $b$ to denote a plaintext balance, $\val$ for a transfer amount, and $\asset$ for the token ticker (e.g. MON).
+
+\one
+\para{Twisted ElGamal.}
+A keypair consists of a decryption key $\dk \getsr \Z_p$ and an encryption key $\ek = \dk \cdot \genH$.
+To encrypt a value $m$ with randomness $r \getsr \Z_p$:
+%
+\[
+  \Enc(m, \ek, r) \;=\; \bigl(\,\underbrace{r \cdot \ek}_{\ctone},\;\;
+  \underbrace{m \cdot \genG + r \cdot \genH}_{\cttwo}\,\bigr).
+\]
+%
+We write $\Enc(m;\, r)$ as shorthand when the key is clear from context.
+Decryption recovers $m \cdot \genG = \cttwo - \dk^{-1} \cdot \ctone$, then solves a bounded DLP for~$m$.
+The scheme is additively homomorphic: $\Enc(a;\, r_a) + \Enc(b;\, r_b) = \Enc(a{+}b;\, r_a{+}r_b)$.
+
+
+\para{Keys.}
+Each user derives $\dk$ deterministically from their EOA signing key via EIP-191 (\S\ref{impl:dk}).
+The chain stores $\ek = \dk \cdot \genH$; We write $\dk_{\rm snd}, \ek_{\rm snd}$ and $\dk_{\rm rcv}, \ek_{\rm rcv}$ when distinguishing sender and recipient.
+Each \emph{Compliance Entity}~(\CE) holds an ECDSA verification key $\vk$ on secp256k1 and a DH key pair $(\cesk, \ceek = \cesk \cdot \genH)$ in~$\G$.
+We instantiate the hash, KDF, and curve in~\S\ref{sec:impl}.
+
+\para{CE multisig.}
+Each \CMAccount\ binds to an ordered list of $n$ \CE\ identities $(\CE_1, \ldots, \CE_n)$ and a threshold $k \le n$.
+Every authorization (deposit, transfer, withdraw) carries a $k$-of-$n$ multisignature: each of $k$ distinct \CE s in the registered list signs the same struct, and the chain verifies all $k$ signatures.
+The default is $n = k = 1$; cross-CE transfers use $n = k = 2$ with one \CE\ per side.
+
+\para{DH shared secret and deterministic randomness.}
+A client and its \CE\ establish a shared secret $\sharedsecret = \dk \cdot \ceek = \cesk \cdot \ek$.
+The sender derives per-transfer encryption randomness from $\sharedsecret$ via a KDF (\S\ref{impl:hkdf}); the sender's \CE\ later recovers the audit trail from $\cesk$ and on-chain data alone, with no per-transfer storage.
+
+\para{Forward secrecy is a non-goal.}
+The shared secret $\sharedsecret$ is long-term: a one-time leak of $\cesk$ retroactively decrypts every transfer the \CE\ has ever authorized.
+Users who suspect \CE\ compromise should rotate their account to a new \CE\ rather than expect cryptographic forward secrecy.

@@ -1,0 +1,16 @@
+\subsection{Recovery Blob}
+\label{sec:recovery}
+
+\para{Definition.}
+The recovery blob \blob\ lets the owner efficiently recover the plaintext balance.
+It is a 16-byte one-time pad keyed by \dk\ and the current ciphertext:
+%
+\[
+  \blob \;:=\; \HKDF(\dk;\, \cbal) \;\oplus\; b,
+\]
+%
+where $b$ is the 128-bit balance.
+
+\para{Decryption.}
+The owner recomputes the 16-byte HKDF output from \dk\ and the on-chain ciphertext, then XORs to recover $b$.
+The chain treats \blob\ as opaque and only enforces that the owner authorizes updates; an incorrect blob harms only its owner.

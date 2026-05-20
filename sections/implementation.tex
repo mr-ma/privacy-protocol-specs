@@ -1,0 +1,73 @@
+\section{Additional Implementation Details}
+\label{sec:impl}
+
+\subsection{Curves and Primitives}
+
+Our prototype instantiates \CM\ over three curve backends.
+%
+\begin{center}
+\begin{tabular}{@{}l l l l@{}}
+  \toprule
+  \textbf{Backend} & \textbf{Security} & \textbf{Point (compressed)} & \textbf{Precompiles} \\
+  \midrule
+  BN254         & $\sim$100-bit & 33 bytes & \texttt{ecAdd}/\texttt{ecMul} \\
+  BLS12-381     & $\sim$128-bit & 49 bytes & EIP-2537 (MSM) \\
+  Ristretto255  & $\sim$128-bit & 32 bytes & Future (custom) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+We use HKDF-SHA256~\cite{rfc5869} for $\KDF$, Keccak-256 for Fiat--Shamir, and Bulletproofs~\cite{bunz2018bulletproofs} with mixed bit-length aggregation for range proofs.
+On BN254 we hash to the curve via try-and-increment with SHA-256; BLS12-381 uses RFC~9380~\cite{rfc9380} SSWU and Ristretto255 uses SHA-512 with Elligator2.
+We derive $\genH$ once via hash-to-curve from a fixed tag and store $\genH$ in the verifier contract.
+
+\subsection{Decryption-Key Derivation}
+\label{impl:dk}
+
+The user signs a fixed protocol-defined EIP-191 message $m$ with the EOA to produce $\sigma_{\sf EOA}$, sets
+%
+\[
+  \dk := \HKDF(\mathsf{IKM} = \sigma_{\sf EOA},\; L = 64) \bmod R,
+\]
+%
+and publishes $\ek = \dk \cdot \genH$ on the first deposit.
+The wallet caches $\dk$ locally to avoid re-deriving $\dk$.
+
+\subsection{Transfer Randomness and Recovery Blob}
+\label{impl:hkdf}
+We use HKDF-SHA256 with distinct (salt, \emph{info}) pairs to derive the transfer randomness $r_i$ and the recovery-blob pad as computationally independent outputs. In particular, we derive them as below:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{@{}l l l@{}}
+    \toprule
+    \textbf{Use} & \textbf{IKM} & \textbf{Info} \\
+    \midrule
+    Transfer randomness & $\sharedsecret$ & $\chainid \cat \asset \cat \cenonce \cat i$ \\
+    Recovery blob       & $\dk$           & $\cbal.\ctone \cat \cbal.\cttwo$ \\
+    \bottomrule
+\end{tabular}
+\end{table}
+
+
+We bind $\chainid$ and $\asset$ into the transfer-randomness \emph{info} so a $\cenonce$ that happens to coincide across chains or assets does not yield the same $r_i$; without this, an observer could subtract the two chunk commitments $\Pchunk{i} = v_i \genG + r_i \genH$ and recover the amount difference.
+
+\subsection{Bulletproof Generators}
+
+We derive $G_i := \HTC(\text{tag}_G \cat i)$ and $H_i := \HTC(\text{tag}_H \cat i)$ for $i \in [0, n_{\rm pad})$ from fixed tags $\text{tag}_G$ and $\text{tag}_H$, both distinct from the Pedersen-$\genH$ tag.
+
+\subsection{CE Authorization Format}
+
+The signature field $\sigma$ on every \CM\ transaction is a length-$k$ array of 65-byte ECDSA signatures over the EIP-712 digest, one per \CE\ in the account's registered committee.
+
+\subsection{CE Registry}
+\texttt{CERegistry.sol} is the on-chain directory of \CE s.
+A \CE\ self-registers by calling \texttt{register(vk, ceEk, asset, tag)}, which records its ECDSA verification key $\vk$, DH encryption key $\ceek$, supported asset, and a free-form policy tag.
+To leave the system, a \CE\ calls \texttt{retire()}, which flips its \texttt{active} flag to \texttt{false}; the entry stays in the directory so that anyone can still look up the historical keys, but the chain rejects any new signature from a retired \CE.
+
+Before accepting a \CE\ signature, the chain consults \texttt{lookup(ce)} and rejects the transaction unless the entry is registered, matches the asset, and is still active.
+
+\subsection{Client-Side State}
+The wallet caches $\dk$ and $\rcur$ locally to avoid re-derivation.
+Self-deposits and withdrawals leave $\rcur$ unchanged because they touch only $\cbal.\cttwo$ via deterministic encryption ($r{=}0$).
+Restoring on a clean device requires re-running \Rerand.
