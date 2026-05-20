@@ -1,0 +1,149 @@
+\subsection{Implementation Deviations}
+\label{sec:improvements}
+
+The v4-sound reference implementation diverges from the spec at
+several points.  Each deviation below is one the panel has reviewed
+and recommends as a spec-side change rather than a one-off
+implementation choice.
+
+\one
+\para{Per-policy vault contracts.}
+The spec describes a single CM precompile keyed by $(\asset, \owner)$.
+The implementation deploys an EIP-1167 minimal-proxy clone per token
+policy and pins each policy's escrow + state to its own contract
+address.
+Two policies over the same underlying asset (e.g. \texttt{USDC-Bahamas}
+and \texttt{USDC-EU} with disjoint \CE\ committees) get physically
+disjoint trie subtrees; a bug in one clone cannot drain another's
+collateral.
+Recommendation: spec should make the \emph{vault contract} the
+authoritative entry for a $(\asset, \mathsf{policyId})$ pair and
+treat the precompile as a stateless verifier the vault delegates
+into.
+
+\one
+\para{Per-account pending-credit cap.}
+The spec fixes the chunked-pending counter ceiling at $2^{16}$ on the
+chain.
+The implementation lifts the cap onto $\acct.\mathsf{maxPending}$
+(default 16), settable at $\texttt{configureAccount}$ time.
+This lets a high-throughput recipient (e.g. a merchant) raise its
+own ceiling without renegotiating the token policy, while a casual
+recipient keeps a tight cap that bounds the decoder window on a
+phone.
+Recommendation: spec should expose the cap as account-state, not
+chain-state, and tie its allowed range to the BSGS window the
+recovery procedure declares.
+
+\one
+\para{Two-key compliance entity profile.}
+The spec gives each \CE\ one DH key $\ceek$ and one ECDSA key $\vk$
+and registers them separately.
+The implementation bundles them in a single $\mathsf{CEProfile}$
+struct $(\encryptpk, \authorizepk)$ stored on the
+\texttt{TokenPolicy}, not on the account.
+Putting the profile on the token makes the \CE\ identity portable
+across all users of that token, lets the issuer rotate \CE\ keys
+without touching $\sim$$N$ account rows, and reduces the per-account
+state footprint to the floor enum.
+Recommendation: move \CE\ identity onto the token policy in the
+spec's account table.
+
+\one
+\para{Wrapped \CE\ authorization digest.}
+The spec has the \CE\ sign the \texttt{TransferAuth} EIP-712 struct
+directly with the same digest the on-chain check recomputes.
+The implementation signs a domain-tagged wrap:
+$\ceauthdigest := \hash(\mathtag{v4\text{-}ce\text{-}authorize} \cat
+\transfercalldigest)$.
+The wrap lets an auditor verify their own signature offline against
+just $\transfercalldigest$ (a 32-byte input) without reconstructing
+the full EIP-712 typed-data domain, which simplifies the
+audit-tooling story.
+The security argument is unchanged: collision-resistance of $\hash$
+plus a unique domain tag.
+
+\one
+\para{Chunked-available with seed-derived blinding.}
+The spec maintains a single twisted-ElGamal $\cbal$ for the main
+balance and mandates a re-encryption step after every
+\texttt{rollover} because the owner no longer knows $\rcur$.
+The implementation chunks the main balance into four 32-bit limbs,
+each blinded by $r_i := \HKDF(\dk;\, \mathtag{av} \cat \asset \cat
+\nonce \cat i)$.
+Because the wallet derives $r_i$ from the seed, it always knows the
+opening; \texttt{Rerand} becomes optional (for key rotation) rather
+than mandatory after every rollover.
+Recommendation: spec should add \emph{chunked available} as an
+alternative balance representation and document the
+seed-derived-blinding contract so \texttt{Rerand} can be relaxed
+from required to opt-in.
+
+\one
+\para{Domain-bound transfer randomness.}
+The spec already binds $\chainid \cat \asset \cat \cenonce \cat i$
+into the HKDF info for $r_i$ (\S\ref{impl:hkdf}).
+The implementation initially defaulted the prover-side $\chainid$ to
+a constant and hardcoded the verifier-side context to zero --- a
+bug that produced verify-side digest mismatches under module
+re-initialization.
+Recommendation: the spec is right; the implementation has to take
+\texttt{chain\_id} from the runtime context (passed through the
+precompile FFI) and the prover from the connected wallet's network,
+not from a constant.
+
+\one
+\para{Recipient lookup via configure-time event.}
+The spec assumes the sender knows the recipient's $\ek$ out of band.
+The implementation emits
+$\mathsf{AccountConfigured}(\token, \mathsf{mmAddress},
+\mathsf{tinyvmOwner})$ from the vault on every successful
+\texttt{configureAccount}, indexed by both addresses.
+A sender can paste either form (MM EOA or the internal account
+address) and a one-call event scan resolves it.
+The panel considers this a UX patch rather than a protocol
+addition; the long-term direction is to collapse the two addresses
+into one (see open questions, \S\ref{sec:open}).
+
+\one
+\para{Effective CE mode pinned by token + both endpoints.}
+The implementation computes the effective mode as the lattice join
+$\cemode_{\rm tok} \lor \cemode_{\rm out, snd} \lor
+\cemode_{\rm in, rcv}$ and feeds it into the call digest the owner
+signs.
+The spec's $\cemode$ is per-token only; per-account inbound/outbound
+floors are not in the data model.
+Recommendation: spec should add account-side floors so a
+high-stake recipient can demand $\Authorize$ even when the token
+floor is $\Capsule$, without rejecting incoming transfers from
+default senders.
+
+\one
+\para{Open: collapse \emph{two-address} confidential identity.}
+\label{sec:open}
+The implementation derives a seed-internal account address (the
+v4-sound ``TinyVM owner'') from the EIP-191 signature in addition
+to the EOA address that paid for gas, and stores per-account state
+under the former.
+This created a UX failure (users paste their MM address; the chain
+has no row for it) that the $\mathsf{AccountConfigured}$ event
+patches but does not solve.
+Three resolutions are on the table:
+%
+\begin{enumerate}[itemsep=.5pt]
+    \item Collapse: bind the account address to $\texttt{msg.sender}$
+      at configure time; drop the seed-derived owner.  Verifier
+      enforces $\texttt{msg.sender}$ ``owns'' the chosen $\ek$ via
+      the configure-time signature; subsequent ops sign with the
+      same EOA key.
+    \item Canonical privacy address: keep two addresses but
+      enforce that the dapp \emph{always} surfaces the privacy
+      form for sharing.  Implementation cost is low; UX risk
+      remains because users still find the EOA via block explorers.
+    \item Stealth addresses (ERC-5564): a fresh per-transfer
+      recipient address derived from the recipient's view tag.
+      Eliminates the question of ``what is Bob's address''.
+\end{enumerate}
+%
+Panel recommends (1) for v5 unless the stealth-address design is
+ready in time.

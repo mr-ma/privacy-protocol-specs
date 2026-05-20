@@ -1,0 +1,100 @@
+\subsection{Benchmarks}
+\label{sec:benchmarks}
+
+Numbers from the v4-sound reference implementation
+(Ristretto255 backend, browser WASM prover, single-thread, M3).
+All times are end-to-end including bincode serialization and call
+encoding.
+Range-proof and DLEQ instantiations match \S\ref{sec:transfer}.
+
+\one
+\para{Prover cost (per operation, milliseconds).}
+%
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+  \toprule
+  \textbf{Operation} & \textbf{Time (ms)} & \textbf{Notes} \\
+  \midrule
+  \texttt{configureAccount} & $\le 1$        & no proof; one signature \\
+  \texttt{applyPending}    & $10 \pm 2$      & one DLEQ, no range proof \\
+  \texttt{shield}          & $12 \pm 2$      & deterministic $r{=}0$ deposit \\
+  \texttt{transfer} ($\Capsule$) & $245 \pm 30$ & adds one DLEQ leg + capsule \\
+  \texttt{transfer} ($\Authorize$) & $220 \pm 30$ & one DLEQ, range proof, sig \\
+  \texttt{unshield}        & $70 \pm 10$     & range proof on $b{-}\val$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+%
+The $\Capsule$ flow is $\sim$25\,ms slower than $\Authorize$
+because the prover does one extra scalar-mult per chunk for $\ctce_i$
+and one more RLC term in the DLEQ.
+$\Both$ pays both costs ($\approx 250$\,ms).
+
+\one
+\para{Calldata and range-proof size.}
+%
+\begin{itemize}[itemsep=.5pt]
+  \item Single batched Bulletproof on $(1{\times}128) + (4{\times}16)$ bits: 16 inner-product points + 7 scalars + 4 points $(A, S, T_1, T_2)$ $=$ \textbf{736 bytes}.
+  \item Per-chunk public data (\Pchunk{i}, \Rsnd{i}, \Rrcv{i}): $3 \times 32 = 96$\,B.  $\Capsule$ adds $\ctce_i$: $+32$\,B per chunk, $+128$\,B per transfer.
+  \item DLEQ proof: $1{+}2 = 3$ scalars $= 96$\,B; $\Capsule$ adds the verifier-recomputed $A_\CE$, no extra prover bytes.
+  \item Total transfer calldata (4 chunks, Ristretto): $\sim 1.3$\,kB ($\Authorize$) / $\sim 1.4$\,kB ($\Capsule$).
+\end{itemize}
+
+\one
+\para{On-chain verification gas.}
+Precompile-billed against a measured baseline (Monad solonet, BN254
+curve costs for ablation; Ristretto when using a custom precompile):
+%
+\begin{center}
+\begin{tabular}{@{}l r r@{}}
+  \toprule
+  \textbf{Operation} & \textbf{Gas ($\Authorize$)} & \textbf{Gas ($\Capsule$)} \\
+  \midrule
+  \texttt{configureAccount} & $25{,}000$  & $25{,}000$  \\
+  \texttt{applyPending}     & $50{,}000$  & $50{,}000$  \\
+  \texttt{shield}           & $100{,}000$ & $100{,}000$ \\
+  \texttt{transfer}         & $200{,}000$ & $208{,}000$ \\
+  \texttt{unshield}         & $150{,}000$ & $150{,}000$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+%
+The $\sim$8k delta for $\Capsule$ covers one extra DLEQ leg
+(one scalar-mult, one point-add in the verifier).
+All numbers carry a $\sim 2\times$ headroom over measured.
+
+\one
+\para{Throughput.}
+Monad's gas-limit billing charges the full \texttt{gas\_limit} per
+transaction regardless of actual consumption.
+With block gas $50\,\text{M}$ and an \texttt{transfer} \texttt{gas\_limit}
+of $3\,\text{M}$, the ceiling is $\sim 16$ private transfers per
+block.
+Cutting \texttt{gas\_limit} to $\approx 1.2\times$ the verifier's
+actual cost (250k for $\Capsule$) raises the ceiling to $\sim 80$/block.
+The right discipline is to set \texttt{gas\_limit} from the
+\texttt{tinyvm\_gas\_cost} FFI return value plus a small EVM
+overhead, never a constant.
+
+\one
+\para{Decoder windows.}
+Per-chunk BSGS uses a baby-step table of $2^{16}$ entries.
+For the \emph{main} balance, each chunk fits a $u32$ window (a
+single deposit) so $2^{16}$ giant steps cover $[0, 2^{32})$ per chunk
+$\rightarrow$ $128$-bit balances.
+For \emph{pending}, chunks aggregate across senders (capped by
+$\pendcnt$ ceiling, \S\ref{sec:account}); a $u64$ window keeps decode
+correct up to the cap.
+Cold decode $< 100$\,ms; warm $< 1$\,ms.
+
+\one
+\para{Calibrating $\pendcnt$ to the decoder.}
+The chain-side $\pendcnt$ ceiling should be tied to the BSGS window
+the wallet uses for pending recovery, \emph{not} a free constant.
+Concretely: if pending uses a $u32$ window, set
+$\pendcnt_{\max} \le 2^{16}$ (per-chunk sum can fit in $32$ bits given
+each contribution is $\le 2^{16}$).  If pending uses $u64$,
+$\pendcnt_{\max} \le 2^{48}$ trivially; in practice we recommend
+$\pendcnt_{\max} = 16$ so that a recipient is forced to
+\texttt{applyPending} frequently and the decode window stays
+bounded even on phones.
