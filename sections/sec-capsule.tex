@@ -1,92 +1,59 @@
 \subsection{Verifiable Capsule}
 \label{sec:capsule}
 
-\emph{Capsule is the non-interactive variant of CE authorization}:
-the sender encrypts the per-transfer randomness $r_i$ to its
-compliance entity at submission time, and proves the encryption is
-consistent with the chunk commitments via the same DLEQ that already
-links the sender and recipient legs.
-No pre-signed \texttt{TransferAuth} struct, no extra round-trip
-between sender and \CE\ before broadcast.
-A token policy chooses its compliance posture at registration time
-via a single flag $\cemode \in \{\None,\, \Capsule,\, \Authorize,\,
-\Both\}$, with $\Both$ requiring both a CE signature \emph{and} a
-capsule.
+The verifiable capsule is the non-interactive variant of CE
+authorization.
+Instead of a pre-signed \texttt{TransferAuth} struct, the sender
+encrypts the per-transfer randomness $r_i$ to its \CE\ as part of the
+transfer transaction, and proves consistency with the chunk
+commitments via the same DLEQ used in~\S\ref{sec:transfer}.
 
 \one
-\para{Step 1: capsule emission (sender, in parallel with Step 1 of the
-authorized flow).}
-The sender additionally computes, for each $i \in [0,3]$:
-%
-\[
-  \ctce_i \;:=\; r_i \cdot \ceeksnd,
-\]
-%
-one extra Ristretto point per chunk.
-Here $\ceeksnd$ is the encryption key of the sender's \CE\
-(\S\ref{sec:notation}), \emph{not} the recipient.
-The capsule rides on the same calldata as the chunk triples already
-required by~\S\ref{sec:transfer}.
+\para{Mode lattice.}
+Each token policy fixes a floor
+$\cemode \in \{\None \prec \Capsule \prec \Authorize \prec \Both\}$.
+Each account binds inbound and outbound floors at
+\texttt{configureAccount} time, each $\succeq$ the token floor.
+The effective mode for a transfer is the lattice join over the token
+floor, the sender's outbound floor, and the recipient's inbound
+floor.
+
+\one
+\para{Step 1: Capsule emission.}
+For each chunk $i \in [0,3]$ the sender additionally computes
+$\ctce_i := r_i \cdot \ceeksnd$, where $\ceeksnd$ is the encryption
+key of the sender's \CE.
+The capsule is included with the chunk triples already required
+by~\S\ref{sec:transfer}.
 
 \one
 \para{Step 2: DLEQ extension.}
-The Step~3 transcript $T_w$ now includes the capsule leg:
-%
-\[
-  T_w := \tagt \cat \cdots \cat \bigl\{\Pchunk{i}, \Rsnd{i}, \Rrcv{i},
-        \ctce_i\bigr\}_{i \in [0,3]}.
-\]
-%
-The random-linear-combination aggregate adds one more term,
-$\hRce := \sum_{i=0}^{3} \gamma_i \cdot \ctce_i$, and the prover
-sends one additional commitment $A_\CE := \alpha_r \cdot \ceeksnd$
-along with $A_P, A_\snd, A_\rcv$.
-Both the challenge $c$ and the response $s_r$ already cover this
-factor; soundness is the same DLEQ proof that already ties the four
-legs.
-No new assumption.
+The transcript $T_w$ of~\S\ref{sec:transfer} is extended with
+$\{\ctce_i\}$.
+The aggregate $\hRce := \sum_{i=0}^{3} \gamma_i \cdot \ctce_i$ joins
+$\hRsnd, \hRrcv$ in the random linear combination.
+The prover emits one extra commitment
+$A_\CE := \alpha_r \cdot \ceeksnd$; no extra response scalar.
 
 \one
-\para{Step 3: on-chain verification.}
-Same procedure as~\S\ref{sec:transfer} with one extra check:
+\para{Step 3: On-chain verification.}
+Identical to~\S\ref{sec:transfer} with the additional check
 $A'_\CE := s_r \cdot \ceeksnd - c \cdot \hRce$, folded into the
-hash that recomputes $c'$.
-The chain rejects if $\cemode$ requires a capsule and any $\ctce_i$
-is the identity element.
+re-derivation of $c'$.
+The chain rejects if the effective mode requires a capsule and any
+$\ctce_i = \identity$.
 
 \one
-\para{Step 4: CE audit (offline).}
-The \CE\ recovers, from chain data alone:
-%
-\[
-  r_i \;=\; \cesksnd^{-1} \cdot \ctce_i,
-  \qquad
-  v_i \cdot \genG \;=\; \Pchunk{i} - r_i \cdot \genH,
-\]
-%
-then solves a $2^{16}$-bounded DLP for $v_i$ and recovers
-$\val = \sum_i 2^{16i} v_i$.
-Cost matches the authorized flow's post-hoc recovery
-(\S\ref{sec:transfer}, ``CE audit''); the difference is that no
-signed struct is needed because the encryption itself is the
-authorization artefact.
+\para{Step 4: CE audit.}
+From chain data the \CE\ recovers
+$r_i = \cesksnd^{-1} \cdot \ctce_i$ and
+$v_i \cdot \genG = \Pchunk{i} - r_i \cdot \genH$, then solves a
+$2^{16}$-bounded DLP for $v_i$.
+Cost matches the recovery from $\sharedsecret$ in~\S\ref{sec:transfer}.
 
 \one
-\para{Modes and floors.}
-The token policy fixes a \emph{floor} $\cemode$; each account
-binds an \emph{account floor} at \texttt{configureAccount} time
-that must be $\succeq$ the token floor in the lattice
-$\None \prec \Capsule \prec \Authorize \prec \Both$.
-The chain rejects any transfer whose effective mode (the join over
-token, sender outbound, and recipient inbound floors) is below
-$\Capsule$ when the policy demands $\Capsule$; below
-$\Authorize$ when the policy demands $\Authorize$; and that lacks
-either ingredient under $\Both$.
-
-\one
-\para{Cost summary.}
-Capsule adds one Ristretto point per chunk (4 group elements per
-transfer), one verifier scalar-mult per RLC leg ($\approx$~$1$ ms),
-and zero off-chain round-trips.
-It removes one signed-EIP-712 struct per transfer when the policy
-floor is $\Capsule$-only.
+\para{Cost.}
+$+4$ group elements per transfer (one $\ctce_i$ per chunk),
+$+1$ scalar-mult per DLEQ verification, no extra round-trips.
+$\Authorize$ retains the signed \texttt{TransferAuth};
+$\Both$ requires both ingredients.
