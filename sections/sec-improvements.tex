@@ -1,9 +1,18 @@
-\subsection{Reference Implementation Variants}
+\subsection{Reference Implementation Variants \new{(NEWLY ADDED)}}
 \label{sec:improvements}
 
 The v4-sound reference implementation diverges from
-\S\ref{sec:design} at the points below; each is folded back into the
-spec as an alternative the panel recommends.
+\S\ref{sec:design} at three points where the alternative is
+substantively better and entails a spec-level change.
+
+\one
+\para{Chunked-available with seed-derived blinding.}
+The main balance is held as four 32-bit chunks, each blinded by
+$r_i := \HKDF(\dk;\, \mathtag{av} \cat \asset \cat \nonce \cat i)$.
+The wallet derives $r_i$ from $\dk$ on demand, so the opening of
+$\cbal$ is always known.
+$\Rerand$ (\S\ref{sec:reencrypt}) is no longer required after every
+rollover and becomes opt-in for key rotation.
 
 \one
 \para{Per-policy vault contracts.}
@@ -17,41 +26,6 @@ The chain precompile is a stateless verifier the vault delegates
 into.
 
 \one
-\para{Account-side pending cap.}
-$\pendcnt_{\max}$ is stored per account (default $16$, settable at
-\texttt{configureAccount} time) rather than fixed chain-wide at
-$2^{16}$.
-A high-throughput recipient raises its own cap; a casual recipient
-keeps a tight one to bound the decode window on a phone.
-The allowed range is tied to the BSGS window declared in the
-recovery procedure.
-
-\one
-\para{Two-key CE profile on the token policy.}
-A \CE's $(\encryptpk, \authorizepk)$ pair is stored on the token
-policy, not on the account.
-Issuers rotate keys without touching individual accounts; the
-per-account state retains only the inbound/outbound floor enum.
-
-\one
-\para{Wrapped CE-authorize digest.}
-The \CE\ signs
-$\ceauthdigest := \hash(\mathtag{v4\text{-}ce\text{-}authorize} \cat \transfercalldigest)$
-rather than the full EIP-712 \texttt{TransferAuth} struct.
-The wrap lets auditors verify their own signatures against a 32-byte
-input without reconstructing the typed-data domain.
-Security: collision resistance of $\hash$ plus the unique tag.
-
-\one
-\para{Chunked-available with seed-derived blinding.}
-The main balance is held as four 32-bit chunks, each blinded by
-$r_i := \HKDF(\dk;\, \mathtag{av} \cat \asset \cat \nonce \cat i)$.
-The wallet derives $r_i$ from $\dk$ on demand, so the opening of
-$\cbal$ is always known.
-$\Rerand$ (\S\ref{sec:reencrypt}) is no longer required after every
-rollover and becomes opt-in for key rotation.
-
-\one
 \para{Account-side CE floors.}
 In addition to the token-policy floor, each account binds inbound
 and outbound floors at \texttt{configureAccount} time, each
@@ -60,24 +34,3 @@ A high-stake recipient can demand $\Authorize$ without forcing every
 sender to obtain a pre-signed \texttt{TransferAuth}; default
 senders use the token floor.
 The effective mode is the lattice join over all three.
-
-\one
-\para{Configure-time recipient discovery.}
-\texttt{configureAccount} emits
-$\mathsf{AccountConfigured}(\token, \mathsf{mmAddress}, \mathsf{tinyvmOwner})$
-indexed by both addresses.
-A sender resolves a recipient's account from either form via a
-one-call event scan.
-
-\one
-\para{Open: collapse confidential identity.}
-\label{sec:open}
-The reference implementation derives an internal account address
-from the EIP-191 signature, distinct from the EOA address that pays
-gas.
-The two-address surface is a deviation from the one-identity model
-of~\S\ref{sec:design} and is targeted for removal in a future
-revision via one of: (i) binding the account address to
-$\texttt{msg.sender}$ at configure time, (ii) a canonical
-privacy-address scheme enforced in clients, or (iii) per-transfer
-stealth addresses.

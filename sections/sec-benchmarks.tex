@@ -1,67 +1,69 @@
-\subsection{Benchmarks}
+\subsection{Benchmarks \new{(NEWLY ADDED)}}
 \label{sec:benchmarks}
 
-Measurements are from the v4-sound reference implementation
-(Ristretto255 backend, browser WASM prover, single-thread, M3),
-end-to-end including bincode encoding.
+Measurements from the v4-sound reference implementation
+(Ristretto255 backend, native release build),
+end-to-end including bincode decoding.
 
-\para{Prover.}
+\para{Verifier (chain-side).}
 %
 \begin{center}
-\begin{tabular}{@{}l r l@{}}
+\begin{tabular}{@{}l r r@{}}
   \toprule
-  \textbf{Op} & \textbf{ms} & \textbf{Notes} \\
+  \textbf{Op} & \textbf{verify (ms)} & \textbf{wire (B)} \\
   \midrule
-  \texttt{configureAccount}        & $\le 1$ & one signature, no proof \\
-  \texttt{applyPending}            & $10$    & DLEQ only \\
-  \texttt{shield}                  & $12$    & $r{=}0$ deposit \\
-  \texttt{transfer} ($\Authorize$) & $220$   & DLEQ + range + sig \\
-  \texttt{transfer} ($\Capsule$)   & $245$   & +1 DLEQ leg, +1 scalar-mult/chunk \\
-  \texttt{unshield}                & $70$    & range proof only \\
+  \texttt{configureAccount}     & $<\!1$  & $480$    \\
+  \texttt{shield} (native)      & $0.97$  & $1{,}051$ \\
+  \texttt{applyPending}         & $2.23$  & $1{,}824$ \\
+  \texttt{unshield}             & $2.29$  & $1{,}796$ \\
+  \texttt{transfer}             & $3.76$  & $2{,}407$ \\
   \bottomrule
 \end{tabular}
 \end{center}
+%
+Verify is mode-invariant within $\pm 0.05$\,ms across $\None$,
+$\Capsule$, $\Authorize$, $\Both$; CE modes add $60$--$150$\,B to the
+wire (CE sig and/or per-chunk capsule legs).
+Verifier is reentrant; Bulletproof generators are immutable statics.
 
 \para{Calldata.}
 %
 \begin{itemize}[itemsep=.5pt]
     \item Range proof (1{$\times$}128 + 4{$\times$}16 bits, batched): 16 IPA points $+$ 7 scalars $+$ 4 points $= 736$\,B.
-    \item Per-chunk public data $(\Pchunk{i}, \Rsnd{i}, \Rrcv{i})$: $96$\,B; $\Capsule$ adds $\ctce_i$ at $+32$\,B per chunk.
+    \item Per-chunk public data $(\Pchunk{i}, \Rsnd{i}, \Rrcv{i})$: $96$\,B; $\Capsule$ adds $\ctce{i}$ at $+32$\,B per chunk.
     \item DLEQ proof: $3$ scalars $= 96$\,B.
-    \item Transfer total (4 chunks, Ristretto): $\sim 1.3$\,kB ($\Authorize$); $\sim 1.4$\,kB ($\Capsule$).
 \end{itemize}
+
+\para{Throughput.}
+On Monad ($400$\,ms blocks, $2$\,MB calldata, $200$\,M gas) the
+calldata ceiling at the measured wire is $2{,}000{,}000 / 2{,}407
+\approx 831$ transfers/block, i.e.\ $\approx 2{,}078$ TPS.
+Measured sustained on solonet: $\approx 1{,}885$ v4-sound TPS vs
+$\approx 1{,}900$ native baseline on the same chain.
+At $754$ transfers/block: calldata $1.81/2$\,MB, gas $151/200$\,M;
+verify needs $\sim 7\times$ parallelism per $400$\,ms block.
+Calldata saturates first, at $\approx 831$ transfers/block.
 
 \para{Verification gas.}
 %
 \begin{center}
-\begin{tabular}{@{}l r r@{}}
+\begin{tabular}{@{}l r@{}}
   \toprule
-  \textbf{Op} & \textbf{$\Authorize$} & \textbf{$\Capsule$} \\
+  \textbf{Op} & \textbf{gas} \\
   \midrule
-  \texttt{configureAccount} & $25\,000$  & $25\,000$  \\
-  \texttt{applyPending}     & $50\,000$  & $50\,000$  \\
-  \texttt{shield}           & $100\,000$ & $100\,000$ \\
-  \texttt{transfer}         & $200\,000$ & $208\,000$ \\
-  \texttt{unshield}         & $150\,000$ & $150\,000$ \\
+  \texttt{configureAccount} & $25\,000$  \\
+  \texttt{applyPending}     & $50\,000$  \\
+  \texttt{shield}           & $100\,000$ \\
+  \texttt{transfer}         & $200\,000$ \\
+  \texttt{unshield}         & $150\,000$ \\
   \bottomrule
 \end{tabular}
 \end{center}
 %
-All numbers carry $\sim 2\times$ headroom over measured.
+All numbers carry $\sim 2\times$ headroom over measured verify time;
+the transfer charge is uniform across CE modes.
 
-\para{Throughput.}
-Under gas-limit billing a tx burns the full \texttt{gas\_limit}.
-With a $50$\,M block and a $3$\,M transfer \texttt{gas\_limit} the
-ceiling is $\sim 16$ private transfers per block; setting
-\texttt{gas\_limit} from \texttt{tinyvm\_gas\_cost} $+\,50$k overhead
-raises it to $\sim 80$/block.
-
-\para{Decoder windows.}
-Main-balance chunks are bounded by a single deposit, so BSGS over
-$[0, 2^{32})$ per chunk is sufficient.
-Pending chunks aggregate across senders up to $\pendcnt_{\max}$, so
-the recovery procedure for pending uses a $2^{64}$ window.
-Cold decode $<\!100$\,ms, warm $<\!1$\,ms with a $2^{16}$ baby-step
-table.
-A tighter $\pendcnt_{\max}$ (e.g.\ $16$ in v4-sound) keeps the
-window bounded on resource-constrained wallets.
+\para{Prover (client-side).}
+Native release: $\sim 21$\,ms per transfer (any CE mode).
+Browser WASM adds a constant factor; prover is off the chain critical
+path and does not affect TPS.
